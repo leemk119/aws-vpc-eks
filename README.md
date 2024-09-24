@@ -6,4 +6,5 @@
 3. Public Subnet has 8,192 IPs, Private Subnet has 8,192 IPs for Frontend, 8,192 IPs for Backend, and 2,048 IPs for Database.
 
 Notification
+
 ETEVERS-IDE is a code server and configures a pre-created IAM
