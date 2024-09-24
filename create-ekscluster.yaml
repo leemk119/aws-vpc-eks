@@ -1,0 +1,79 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: my-cluster
+  region: ap-northeast-2
+  version: "1.30"
+
+vpc:
+  id: vpc-0883f4fbf60711740 # "vpc-ID"
+
+  subnets:
+    public:
+      public-a:
+        id: subnet-09025a84bb3549020  # subnet-ID
+
+      public-c:
+        id: subnet-011e4e984a8d87387  # subnet-ID
+
+    private:
+      private-frontend-a:
+        id: subnet-08088714fe124fc2c  # subnet-ID
+
+      private-frontend-c:
+        id: subnet-0909de2822578589a  # subnet-ID
+
+      private-backend-a:
+        id: subnet-0edf8d39aafeb4fe0  # subnet-ID
+
+      private-backend-c:
+        id: subnet-0310d58357bcb1d37  # subnet-ID
+
+      private-database-a:
+        id: subnet-03f6b7bf9a3a289be  # subnet-ID
+
+      private-database-c:
+        id: subnet-00d9738dd80c2222c  # subnet-ID
+
+managedNodeGroups:
+- name: FRONTEND
+  instanceType: t3a.medium
+  volumeSize: 30
+  ssh:
+    allow: true
+    publicKeyName: lab-key # aws key pair name
+  desiredCapacity: 2
+  minSize: 2
+  maxSize: 3
+  labels: { nodegroup-type: FRONTEND }
+  privateNetworking: true
+  subnets:
+    - private-frontend-a
+    - private-frontend-c
+
+- name: BACKEND
+  instanceType: t3a.medium
+  volumeSize: 30
+  ssh:
+    allow: true
+    publicKeyName: lab-key # aws key pair name
+  desiredCapacity: 2
+  minSize: 2
+  maxSize: 3
+  labels: { nodegroup-type: BACKEND }
+  privateNetworking: true
+  subnets:
+    - private-backend-a
+    - private-backend-c
+
+addons:
+  - name: vpc-cni
+    version: latest
+  - name: coredns
+    version: latest
+  - name: kube-proxy
+    version: latest
+
+iam:
+  withOIDC: true

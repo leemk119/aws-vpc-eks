@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template to create a VPC, public/private subnets, route tables, Internet Gateway, and NAT Gateway for an EKS cluster.
+
+Parameters:
+  SSHKeyPair:
+    Type: String
+    Description: EC2 KeyPair to ETEVERS-IDE Host and eks node group
+    Default: lab-key  # 생성될 키 페어 이름
+
+Resources:
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: eks-vpc
+
+  # IGW
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: eks-igw
+
+  # IGW to VPC
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+# Public Subnet
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/19
+      AvailabilityZone: ap-northeast-2a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: eks-public-subnet-a
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+
+  # Public Subnet
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.32.0/19
+      AvailabilityZone: ap-northeast-2c
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: eks-public-subnet-c
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+
+ # Private Subnet Frontend
+  PrivateFrontendSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.64.0/19
+      AvailabilityZone: ap-northeast-2a
+      Tags:
+        - Key: Name
+          Value: eks-private-frontend-subnet-a
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+  # Private Subnet Frontend
+  PrivateFrontendSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.96.0/19
+      AvailabilityZone: ap-northeast-2c
+      Tags:
+        - Key: Name
+          Value: eks-private-frontend-subnet-c
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+# Private Subnet Backend
+  PrivateBackendSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.128.0/19
+      AvailabilityZone: ap-northeast-2a
+      Tags:
+        - Key: Name
+          Value: eks-private-backend-subnet-a
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+  # Private Subnet Backend
+  PrivateBackendSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.160.0/19
+      AvailabilityZone: ap-northeast-2c
+      Tags:
+        - Key: Name
+          Value: eks-private-backend-subnet-c
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+ # Private Subnet Database
+  PrivateDatabaseSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.192.0/21
+      AvailabilityZone: ap-northeast-2a
+      Tags:
+        - Key: Name
+          Value: eks-private-database-subnet-a
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+  # Private Subnet Database
+  PrivateDatabaseSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.200.0/21
+      AvailabilityZone: ap-northeast-2c
+      Tags:
+        - Key: Name
+          Value: eks-private-database-subnet-c
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+
+  # Public RT
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: eks-public-rt
+
+  # Public RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRouteTable
+
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: eks-nat-gateway
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: eks-private-rt
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateFrontendSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateFrontendSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateFrontendSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateFrontendSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateBackendSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateBackendSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateBackendSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateBackendSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateDatabaseSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateDatabaseSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateDatabaseSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateDatabaseSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+  EksClusterRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "eks.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      RoleName: eksClusterRole
+      Tags:
+        - Key: Name
+          Value: eksClusterRole
+
+  EksNodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+      RoleName: AmazonEKSNodeRole
+      Tags:
+        - Key: Name
+          Value: AmazonEKSNodeRole
+
+  EteversIdeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow 8080 ports and SSH
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: etevers-ide-sg
+
+  # Etevers-Ide EC2 Instance
+  EteversIde:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.small
+      KeyName: !Ref SSHKeyPair  # ETEVERS-IDE SSH Key Pair
+      SecurityGroupIds:
+        - !Ref EteversIdeSecurityGroup
+      SubnetId: !Ref PublicSubnetA
+      ImageId: ami-036ca1e646bf15a99
+      Tags:
+        - Key: Name
+          Value: etevers-ide
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+  PublicSubnetAId:
+    Description: Public Subnet A ID
+    Value: !Ref PublicSubnetA
+  PublicSubnetCId:
+    Description: Public Subnet C ID
+    Value: !Ref PublicSubnetC
+  PrivateFrontendSubnetAId:
+    Description: Private Frontend Subnet A ID
+    Value: !Ref PrivateFrontendSubnetA
+  PrivateFrontendSubnetCId:
+    Description: Private Frontend Subnet C ID
+    Value: !Ref PrivateFrontendSubnetC
+  PrivateBackendSubnetAId:
+    Description: Private Backend Subnet A ID
+    Value: !Ref PrivateBackendSubnetA
+  PrivateBackendSubnetCId:
+    Description: Private Backend Subnet C ID
+    Value: !Ref PrivateBackendSubnetC
+  PrivateDatabaseSubnetAId:
+    Description: Private Database Subnet A ID
+    Value: !Ref PrivateDatabaseSubnetA
+  PrivateDatabaseSubnetCId:
+    Description: Private Database Subnet C ID
+    Value: !Ref PrivateDatabaseSubnetC
+
