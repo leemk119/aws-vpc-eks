@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CloudFormation template to create a VPC, public/private subnets,
-  route tables, Internet Gateway, and NAT Gateway for an EKS cluster.
+Description: CloudFormation template to create a VPC, public/private subnets, route tables, Internet Gateway, and NAT Gateway for an EKS cluster.
 
 Parameters:
   SSHKeyPair:
