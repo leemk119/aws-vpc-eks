@@ -1,11 +1,12 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: CloudFormation template to create a VPC, public/private subnets, route tables, Internet Gateway, and NAT Gateway for an EKS cluster.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a VPC, public/private subnets,
+  route tables, Internet Gateway, and NAT Gateway for an EKS cluster.
 
 Parameters:
   SSHKeyPair:
     Type: String
     Description: EC2 KeyPair to ETEVERS-IDE Host and eks node group
-    Default: lab-key  # 생성될 키 페어 이름
+    Default: lab-key # 생성될 키 페어 이름
 
 Resources:
   # VPC
@@ -34,7 +35,7 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-# Public Subnet
+  # Public Subnet
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -46,7 +47,7 @@ Resources:
         - Key: Name
           Value: eks-public-subnet-a
         - Key: kubernetes.io/role/elb
-          Value: "1"
+          Value: '1'
 
   # Public Subnet
   PublicSubnetC:
@@ -60,9 +61,9 @@ Resources:
         - Key: Name
           Value: eks-public-subnet-c
         - Key: kubernetes.io/role/elb
-          Value: "1"
+          Value: '1'
 
- # Private Subnet Frontend
+  # Private Subnet Frontend
   PrivateFrontendSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -73,7 +74,7 @@ Resources:
         - Key: Name
           Value: eks-private-frontend-subnet-a
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
   # Private Subnet Frontend
   PrivateFrontendSubnetC:
@@ -86,9 +87,9 @@ Resources:
         - Key: Name
           Value: eks-private-frontend-subnet-c
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
-# Private Subnet Backend
+  # Private Subnet Backend
   PrivateBackendSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -99,7 +100,7 @@ Resources:
         - Key: Name
           Value: eks-private-backend-subnet-a
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
   # Private Subnet Backend
   PrivateBackendSubnetC:
@@ -112,9 +113,9 @@ Resources:
         - Key: Name
           Value: eks-private-backend-subnet-c
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
- # Private Subnet Database
+  # Private Subnet Database
   PrivateDatabaseSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -125,7 +126,7 @@ Resources:
         - Key: Name
           Value: eks-private-database-subnet-a
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
   # Private Subnet Database
   PrivateDatabaseSubnetC:
@@ -138,7 +139,7 @@ Resources:
         - Key: Name
           Value: eks-private-database-subnet-c
         - Key: kubernetes.io/role/internal-elb
-          Value: "1"
+          Value: '1'
 
   # Public RT
   PublicRouteTable:
@@ -237,14 +238,14 @@ Resources:
 
   EksClusterRole:
     Type: AWS::IAM::Role
-    Properties: 
+    Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: "eks.amazonaws.com"
-            Action: "sts:AssumeRole"
+              Service: eks.amazonaws.com
+            Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
       RoleName: eksClusterRole
@@ -256,12 +257,12 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: "ec2.amazonaws.com"
-            Action: "sts:AssumeRole"
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
@@ -294,11 +295,11 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.small
-      KeyName: !Ref SSHKeyPair  # ETEVERS-IDE SSH Key Pair
+      KeyName: !Ref SSHKeyPair # ETEVERS-IDE SSH Key Pair
       SecurityGroupIds:
         - !Ref EteversIdeSecurityGroup
       SubnetId: !Ref PublicSubnetA
-      ImageId: ami-036ca1e646bf15a99
+      ImageId: ami-0f6df29e780f30dee
       Tags:
         - Key: Name
           Value: etevers-ide
@@ -331,4 +332,3 @@ Outputs:
   PrivateDatabaseSubnetCId:
     Description: Private Database Subnet C ID
     Value: !Ref PrivateDatabaseSubnetC
-
